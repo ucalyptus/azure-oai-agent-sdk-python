@@ -347,7 +347,7 @@ For issues and questions:
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │   Your Python Application              │
 └──────────────┬──────────────────────────┘
