@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 from ._errors import (
+    AzureConnectionError,
     ClaudeSDKError,
-    CLIConnectionError,
+    CLIConnectionError,  # Backward compatibility alias
     CLIJSONDecodeError,
     CLINotFoundError,
     ProcessError,
@@ -352,7 +353,8 @@ __all__ = [
     "SdkMcpTool",
     # Errors
     "ClaudeSDKError",
-    "CLIConnectionError",
+    "AzureConnectionError",
+    "CLIConnectionError",  # Backward compatibility alias
     "CLINotFoundError",
     "ProcessError",
     "CLIJSONDecodeError",

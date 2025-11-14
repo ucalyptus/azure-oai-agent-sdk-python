@@ -7,11 +7,22 @@ class ClaudeSDKError(Exception):
     """Base exception for all Claude SDK errors."""
 
 
-class CLIConnectionError(ClaudeSDKError):
-    """Raised when unable to connect to Claude Code."""
+class AzureConnectionError(ClaudeSDKError):
+    """Raised when unable to connect to Azure OpenAI or when Azure API requests fail.
+
+    This exception is raised for Azure OpenAI transport errors including:
+    - Azure AD authentication failures
+    - APIM connection errors
+    - HTTP request/response errors
+    - Network connectivity issues
+    """
 
 
-class CLINotFoundError(CLIConnectionError):
+# Backward compatibility alias for legacy Claude CLI usage
+CLIConnectionError = AzureConnectionError
+
+
+class CLINotFoundError(AzureConnectionError):
     """Raised when Claude Code is not found or not installed."""
 
     def __init__(

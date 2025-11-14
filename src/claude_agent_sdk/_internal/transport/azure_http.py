@@ -7,7 +7,7 @@ from typing import Any
 
 import aiohttp
 
-from ..._errors import CLIConnectionError
+from ..._errors import AzureConnectionError
 from ...types import AzureOpenAIOptions
 from ..auth.azure_auth import AzureADAuth
 from . import Transport
@@ -65,7 +65,7 @@ class AzureHTTPTransport(Transport):
             logger.info("Successfully connected to Azure OpenAI APIM")
 
         except Exception as e:
-            error = CLIConnectionError(f"Failed to connect to Azure OpenAI: {e}")
+            error = AzureConnectionError(f"Failed to connect to Azure OpenAI: {e}")
             await self._cleanup_session()
             raise error from e
 
@@ -98,7 +98,7 @@ class AzureHTTPTransport(Transport):
     async def _read_messages_impl(self) -> AsyncIterator[dict[str, Any]]:
         """Internal implementation of read_messages."""
         if not self._ready or not self._session:
-            raise CLIConnectionError("Not connected to Azure OpenAI")
+            raise AzureConnectionError("Not connected to Azure OpenAI")
 
         try:
             # Get access token
@@ -209,12 +209,12 @@ class AzureHTTPTransport(Transport):
 
         except aiohttp.ClientError as e:
             logger.error(f"HTTP error during Azure OpenAI request: {type(e).__name__}")
-            raise CLIConnectionError("Azure OpenAI API error occurred") from e
+            raise AzureConnectionError("Azure OpenAI API error occurred") from e
         except Exception as e:
             logger.error(
                 f"Unexpected error during Azure OpenAI request: {type(e).__name__}"
             )
-            raise CLIConnectionError("Unexpected error occurred") from e
+            raise AzureConnectionError("Unexpected error occurred") from e
 
     def _prepare_messages(self) -> list[dict[str, Any]]:
         """Prepare messages array for Azure OpenAI API.
