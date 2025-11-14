@@ -65,4 +65,7 @@ class Transport(ABC):
         pass
 
 
-__all__ = ["Transport"]
+# Import after defining Transport to avoid circular import issues
+from .azure_http import AzureHTTPTransport  # noqa: E402
+
+__all__ = ["Transport", "AzureHTTPTransport"]

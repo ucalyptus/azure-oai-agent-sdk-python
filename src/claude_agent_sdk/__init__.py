@@ -5,19 +5,22 @@ from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 from ._errors import (
+    AzureConnectionError,
     ClaudeSDKError,
-    CLIConnectionError,
+    CLIConnectionError,  # Backward compatibility alias
     CLIJSONDecodeError,
     CLINotFoundError,
     ProcessError,
 )
 from ._internal.transport import Transport
 from ._version import __version__
+from .azure_query import azure_query
 from .client import ClaudeSDKClient
 from .query import query
 from .types import (
     AgentDefinition,
     AssistantMessage,
+    AzureOpenAIOptions,
     BaseHookInput,
     CanUseTool,
     ClaudeAgentOptions,
@@ -298,6 +301,7 @@ def create_sdk_mcp_server(
 __all__ = [
     # Main exports
     "query",
+    "azure_query",
     "__version__",
     # Transport
     "Transport",
@@ -312,6 +316,7 @@ __all__ = [
     "ResultMessage",
     "Message",
     "ClaudeAgentOptions",
+    "AzureOpenAIOptions",
     "TextBlock",
     "ThinkingBlock",
     "ToolUseBlock",
@@ -348,7 +353,8 @@ __all__ = [
     "SdkMcpTool",
     # Errors
     "ClaudeSDKError",
-    "CLIConnectionError",
+    "AzureConnectionError",
+    "CLIConnectionError",  # Backward compatibility alias
     "CLINotFoundError",
     "ProcessError",
     "CLIJSONDecodeError",

@@ -560,6 +560,38 @@ class ClaudeAgentOptions:
     max_thinking_tokens: int | None = None
 
 
+@dataclass
+class AzureOpenAIOptions:
+    """Configuration options for Azure OpenAI APIM with enterprise authentication.
+
+    Provides configuration for accessing Azure OpenAI API Management (APIM)
+    using OAuth2 client credentials flow for enterprise authentication.
+    """
+
+    # Azure AD Authentication (OAuth2 Client Credentials)
+    tenant_id: str  # Azure AD tenant ID
+    client_id: str  # Application (client) ID
+    client_secret: str = field(repr=False)  # Client secret (hidden from repr)
+
+    # Azure APIM Configuration
+    endpoint: str  # APIM endpoint URL (e.g., https://your-apim.azure-api.net/openai)
+    apim_subscription_key: str = field(repr=False)  # APIM key (hidden from repr)
+
+    # Azure OpenAI Model Configuration
+    model: str = "gpt-4"  # Model deployment name
+    max_tokens: int = 4096  # Maximum tokens in response
+    temperature: float | None = None  # Sampling temperature (0.0 to 2.0)
+
+    # Optional OAuth2 Configuration
+    scope: str | None = None  # OAuth2 scope (default: Azure Cognitive Services)
+
+    # Optional Tool Configuration
+    tools: list[dict[str, Any]] | None = None  # Function calling tools
+
+    # Working Directory
+    cwd: str | Path | None = None  # Working directory for operations
+
+
 # SDK Control Protocol
 class SDKControlInterruptRequest(TypedDict):
     subtype: Literal["interrupt"]
