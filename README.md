@@ -13,7 +13,7 @@ Python SDK for Azure OpenAI with API Management (APIM) and enterprise-level auth
 ## Installation
 
 ```bash
-pip install azure-openai-agent-sdk
+pip install claude-agent-sdk
 ```
 
 **Prerequisites:**

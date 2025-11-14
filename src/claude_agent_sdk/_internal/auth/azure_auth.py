@@ -95,8 +95,26 @@ class AzureADAuth:
                 response.raise_for_status()
                 token_data: dict[str, Any] = await response.json()
 
+                # Validate access_token presence
+                if "access_token" not in token_data:
+                    raise RuntimeError("Token response missing 'access_token'")
+
                 self._token = token_data["access_token"]
-                expires_in = int(token_data.get("expires_in", 3600))
+
+                # Validate and parse expires_in with fallback
+                try:
+                    expires_in = int(token_data.get("expires_in", 3600))
+                    if expires_in <= 0:
+                        logger.warning(
+                            "Invalid expires_in value, using default of 3600 seconds"
+                        )
+                        expires_in = 3600  # Fallback to 1 hour
+                except (ValueError, TypeError):
+                    logger.warning(
+                        "Could not parse expires_in, using default of 3600 seconds"
+                    )
+                    expires_in = 3600  # Fallback to 1 hour
+
                 self._token_expiry = time.time() + expires_in
 
                 logger.info("Successfully acquired Azure AD access token")
@@ -104,6 +122,6 @@ class AzureADAuth:
         except aiohttp.ClientError as e:
             logger.error(f"Failed to acquire Azure AD token: {type(e).__name__}")
             raise
-        except KeyError as e:
+        except (KeyError, RuntimeError) as e:
             logger.error("Invalid token response format (missing required field)")
             raise RuntimeError("Invalid token response format") from e
