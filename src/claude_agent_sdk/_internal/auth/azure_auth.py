@@ -39,6 +39,14 @@ class AzureADAuth:
         )
         self._refresh_lock = asyncio.Lock()
 
+    def __repr__(self) -> str:
+        """Return string representation without exposing client_secret."""
+        return (
+            f"AzureADAuth(tenant_id={self.tenant_id!r}, "
+            f"client_id={self.client_id!r}, "
+            f"scope={self.scope!r})"
+        )
+
     async def get_access_token(self, session: aiohttp.ClientSession) -> str:
         """Get a valid access token, refreshing if necessary.
 

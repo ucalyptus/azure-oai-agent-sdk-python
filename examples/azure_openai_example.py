@@ -13,8 +13,8 @@ import anyio
 
 from claude_agent_sdk import (
     AssistantMessage,
+    AzureConnectionError,
     AzureOpenAIOptions,
-    CLIConnectionError,
     TextBlock,
     azure_query,
 )
@@ -110,8 +110,8 @@ async def error_handling_example():
                     if isinstance(block, TextBlock):
                         print(f"Response: {block.text}")
 
-    except CLIConnectionError as e:
-        print(f"Connection error: {e}")
+    except AzureConnectionError as e:
+        print(f"Azure connection error: {e}")
         print("Check your Azure AD credentials and APIM configuration.")
 
     except aiohttp.ClientError as e:

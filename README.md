@@ -189,7 +189,7 @@ The SDK uses OAuth2 client credentials flow:
 ```python
 import os
 
-from claude_agent_sdk import azure_query, AzureOpenAIOptions, CLIConnectionError
+from claude_agent_sdk import azure_query, AzureOpenAIOptions, AzureConnectionError
 import aiohttp
 
 async def query_with_error_handling():
@@ -208,8 +208,9 @@ async def query_with_error_handling():
             options=options
         ):
             print(message)
-    except CLIConnectionError as e:
-        print(f"Connection error: {e}")
+    except AzureConnectionError as e:
+        print(f"Azure connection error: {e}")
+        print("Check your Azure AD credentials and APIM configuration.")
     except aiohttp.ClientError as e:
         print(f"HTTP error: {e}")
     except Exception as e:

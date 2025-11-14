@@ -144,7 +144,11 @@ class AzureHTTPTransport(Transport):
                 # SSE format uses double newlines to separate events
                 buffer = ""
                 byte_buffer = b""
+                done = False  # Track stream completion
                 async for chunk_bytes in response.content.iter_chunked(8192):
+                    if done:
+                        break
+
                     # Handle partial UTF-8 sequences at chunk boundaries
                     byte_buffer += chunk_bytes
                     try:
@@ -163,7 +167,7 @@ class AzureHTTPTransport(Transport):
                         continue
 
                     # Process complete events (separated by double newlines)
-                    while "\n\n" in buffer:
+                    while "\n\n" in buffer and not done:
                         event, buffer = buffer.split("\n\n", 1)
                         event = event.strip()
 
@@ -181,7 +185,7 @@ class AzureHTTPTransport(Transport):
 
                                 # Check for stream end
                                 if data_str == "[DONE]":
-                                    buffer = ""  # Clear buffer
+                                    done = True
                                     break
 
                                 try:

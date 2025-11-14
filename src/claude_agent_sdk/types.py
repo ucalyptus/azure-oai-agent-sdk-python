@@ -564,7 +564,7 @@ class ClaudeAgentOptions:
 class AzureOpenAIOptions:
     """Configuration options for Azure OpenAI APIM with enterprise authentication.
 
-    This replaces Claude API usage with Azure OpenAI API Management (APIM)
+    Provides configuration for accessing Azure OpenAI API Management (APIM)
     using OAuth2 client credentials flow for enterprise authentication.
     """
 
