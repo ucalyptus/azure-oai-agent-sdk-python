@@ -1,0 +1,86 @@
+"""Azure AD OAuth2 authentication for Azure OpenAI APIM."""
+
+import logging
+import time
+from typing import Any
+
+import aiohttp
+
+logger = logging.getLogger(__name__)
+
+
+class AzureADAuth:
+    """Handles Azure AD OAuth2 authentication with client credentials flow."""
+
+    def __init__(
+        self,
+        tenant_id: str,
+        client_id: str,
+        client_secret: str,
+        scope: str = "https://cognitiveservices.azure.com/.default",
+    ):
+        """Initialize Azure AD authentication.
+
+        Args:
+            tenant_id: Azure AD tenant ID
+            client_id: Application (client) ID
+            client_secret: Client secret
+            scope: OAuth2 scope (default: Azure Cognitive Services scope)
+        """
+        self.tenant_id = tenant_id
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.scope = scope
+        self._token: str | None = None
+        self._token_expiry: float = 0
+        self._token_url = (
+            f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        )
+
+    async def get_access_token(self) -> str:
+        """Get a valid access token, refreshing if necessary.
+
+        Returns:
+            Valid access token string
+
+        Raises:
+            aiohttp.ClientError: If token acquisition fails
+        """
+        # Check if we have a valid cached token (with 5 minute buffer)
+        if self._token and time.time() < (self._token_expiry - 300):
+            return self._token
+
+        # Request new token
+        await self._refresh_token()
+        if not self._token:
+            raise RuntimeError("Failed to acquire access token")
+
+        return self._token
+
+    async def _refresh_token(self) -> None:
+        """Refresh the access token using client credentials flow."""
+        data = {
+            "grant_type": "client_credentials",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "scope": self.scope,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(self._token_url, data=data) as response:
+                    response.raise_for_status()
+                    token_data: dict[str, Any] = await response.json()
+
+                    self._token = token_data["access_token"]
+                    expires_in = int(token_data.get("expires_in", 3600))
+                    self._token_expiry = time.time() + expires_in
+
+                    logger.info("Successfully acquired Azure AD access token")
+
+            except aiohttp.ClientError as e:
+                logger.error(f"Failed to acquire Azure AD token: {e}")
+                raise
+            except KeyError as e:
+                logger.error(f"Invalid token response format: {e}")
+                raise RuntimeError(f"Invalid token response: {e}") from e

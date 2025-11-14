@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "claude-agent-sdk"
-version = "0.1.6"
-description = "Python SDK for Claude Code"
+name = "azure-openai-agent-sdk"
+version = "0.2.0"
+description = "Python SDK for Azure OpenAI with APIM Enterprise Authentication"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Anthropic", email = "support@anthropic.com"},
+    {name = "Azure OpenAI Team", email = "support@example.com"},
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -23,11 +23,12 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Typing :: Typed",
 ]
-keywords = ["claude", "ai", "sdk", "anthropic"]
+keywords = ["azure", "openai", "apim", "ai", "sdk", "enterprise"]
 dependencies = [
     "anyio>=4.0.0",
     "typing_extensions>=4.0.0; python_version<'3.11'",
     "mcp>=0.1.0",
+    "aiohttp>=3.9.0",
 ]
 
 [project.optional-dependencies]

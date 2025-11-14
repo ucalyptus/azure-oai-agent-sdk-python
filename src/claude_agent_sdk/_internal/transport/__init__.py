@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from typing import Any
 
+from .azure_http import AzureHTTPTransport
+
 
 class Transport(ABC):
     """Abstract transport for Claude communication.
@@ -65,4 +67,4 @@ class Transport(ABC):
         pass
 
 
-__all__ = ["Transport"]
+__all__ = ["Transport", "AzureHTTPTransport"]
