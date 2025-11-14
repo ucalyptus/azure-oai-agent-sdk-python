@@ -119,7 +119,9 @@ class AzureHTTPTransport(Transport):
             request_body = {
                 "messages": messages,
                 "stream": True,
-                "model": self._options.model or "gpt-4",
+                "model": (
+                    self._options.model if self._options.model is not None else "gpt-4"
+                ),
                 "max_tokens": self._options.max_tokens,
             }
 
@@ -141,8 +143,24 @@ class AzureHTTPTransport(Transport):
                 # Process Server-Sent Events stream
                 # SSE format uses double newlines to separate events
                 buffer = ""
-                async for chunk_bytes in response.content.iter_any():
-                    buffer += chunk_bytes.decode("utf-8")
+                byte_buffer = b""
+                async for chunk_bytes in response.content.iter_chunked(8192):
+                    # Handle partial UTF-8 sequences at chunk boundaries
+                    byte_buffer += chunk_bytes
+                    try:
+                        decoded_chunk = byte_buffer.decode("utf-8")
+                        byte_buffer = b""  # Clear buffer on successful decode
+                        buffer += decoded_chunk
+                    except UnicodeDecodeError:
+                        # Partial UTF-8 sequence at end, keep in byte_buffer for next chunk
+                        if (
+                            len(byte_buffer) > 4
+                        ):  # UTF-8 max 4 bytes, if longer it's an error
+                            # Try to decode as much as possible
+                            decoded_chunk = byte_buffer.decode("utf-8", errors="ignore")
+                            buffer += decoded_chunk
+                            byte_buffer = b""
+                        continue
 
                     # Process complete events (separated by double newlines)
                     while "\n\n" in buffer:
@@ -172,8 +190,10 @@ class AzureHTTPTransport(Transport):
                                     message = self._convert_chunk_to_message(chunk)
                                     if message:
                                         yield message
-                                except json.JSONDecodeError as e:
-                                    logger.warning(f"Failed to parse chunk: {e}")
+                                except json.JSONDecodeError:
+                                    logger.warning(
+                                        "Failed to parse JSON chunk (invalid format)"
+                                    )
                                     continue
 
             # Yield final result message
@@ -188,11 +208,13 @@ class AzureHTTPTransport(Transport):
             }
 
         except aiohttp.ClientError as e:
-            logger.error(f"HTTP error during Azure OpenAI request: {e}")
-            raise CLIConnectionError(f"Azure OpenAI API error: {e}") from e
+            logger.error(f"HTTP error during Azure OpenAI request: {type(e).__name__}")
+            raise CLIConnectionError("Azure OpenAI API error occurred") from e
         except Exception as e:
-            logger.error(f"Unexpected error during Azure OpenAI request: {e}")
-            raise CLIConnectionError(f"Unexpected error: {e}") from e
+            logger.error(
+                f"Unexpected error during Azure OpenAI request: {type(e).__name__}"
+            )
+            raise CLIConnectionError("Unexpected error occurred") from e
 
     def _prepare_messages(self) -> list[dict[str, Any]]:
         """Prepare messages array for Azure OpenAI API.
@@ -222,11 +244,18 @@ class AzureHTTPTransport(Transport):
         # Return message if there's any content or tool calls
         # Note: In streaming mode, role is only present in the first chunk
         if content or tool_calls:
+            # Get model from chunk or options with explicit None check
+            model = chunk.get("model")
+            if model is None:
+                model = (
+                    self._options.model if self._options.model is not None else "gpt-4"
+                )
+
             message: dict[str, Any] = {
                 "type": "assistant",
                 "message": {
                     "content": [],
-                    "model": chunk.get("model", self._options.model or "gpt-4"),
+                    "model": model,
                 },
             }
 

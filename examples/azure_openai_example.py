@@ -7,8 +7,17 @@ This example demonstrates how to use the Azure OpenAI Agent SDK with:
 """
 
 import os
+
+import aiohttp
 import anyio
-from claude_agent_sdk import azure_query, AzureOpenAIOptions, AssistantMessage, TextBlock
+
+from claude_agent_sdk import (
+    AssistantMessage,
+    AzureOpenAIOptions,
+    CLIConnectionError,
+    TextBlock,
+    azure_query,
+)
 
 
 async def basic_query():
@@ -77,9 +86,6 @@ async def custom_parameters_example():
 async def error_handling_example():
     """Example with error handling."""
     print("\n=== Error Handling Example ===\n")
-
-    from claude_agent_sdk import CLIConnectionError
-    import aiohttp
 
     options = AzureOpenAIOptions(
         tenant_id=os.environ.get("AZURE_TENANT_ID", "your-tenant-id"),

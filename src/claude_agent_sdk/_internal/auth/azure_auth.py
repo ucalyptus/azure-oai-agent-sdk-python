@@ -1,5 +1,6 @@
 """Azure AD OAuth2 authentication for Azure OpenAI APIM."""
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -36,6 +37,7 @@ class AzureADAuth:
         self._token_url = (
             f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
         )
+        self._refresh_lock = asyncio.Lock()
 
     async def get_access_token(self, session: aiohttp.ClientSession) -> str:
         """Get a valid access token, refreshing if necessary.
@@ -54,12 +56,18 @@ class AzureADAuth:
         if self._token and time.time() < (self._token_expiry - 300):
             return self._token
 
-        # Request new token
-        await self._refresh_token(session)
-        if not self._token:
-            raise RuntimeError("Failed to acquire access token")
+        # Use lock to prevent concurrent token refreshes
+        async with self._refresh_lock:
+            # Check again after acquiring lock (another coroutine may have refreshed)
+            if self._token and time.time() < (self._token_expiry - 300):
+                return self._token
 
-        return self._token
+            # Request new token
+            await self._refresh_token(session)
+            if not self._token:
+                raise RuntimeError("Failed to acquire access token")
+
+            return self._token
 
     async def _refresh_token(self, session: aiohttp.ClientSession) -> None:
         """Refresh the access token using client credentials flow.
@@ -86,8 +94,8 @@ class AzureADAuth:
                 logger.info("Successfully acquired Azure AD access token")
 
         except aiohttp.ClientError as e:
-            logger.error(f"Failed to acquire Azure AD token: {e}")
+            logger.error(f"Failed to acquire Azure AD token: {type(e).__name__}")
             raise
         except KeyError as e:
-            logger.error(f"Invalid token response format: {e}")
-            raise RuntimeError(f"Invalid token response: {e}") from e
+            logger.error("Invalid token response format (missing required field)")
+            raise RuntimeError("Invalid token response format") from e
