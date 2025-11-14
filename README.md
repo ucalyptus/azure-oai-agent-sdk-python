@@ -285,6 +285,8 @@ async for message in query(prompt="Hello", options=options):
 
 **After (Azure OpenAI):**
 ```python
+import os
+
 from claude_agent_sdk import azure_query, AzureOpenAIOptions
 
 options = AzureOpenAIOptions(
