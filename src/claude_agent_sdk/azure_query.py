@@ -1,7 +1,6 @@
 """Query function for Azure OpenAI APIM interactions."""
 
-from collections.abc import AsyncIterable, AsyncIterator
-from typing import Any
+from collections.abc import AsyncIterator
 
 from ._internal.message_parser import parse_message
 from ._internal.transport.azure_http import AzureHTTPTransport
@@ -10,7 +9,7 @@ from .types import AzureOpenAIOptions, Message
 
 async def azure_query(
     *,
-    prompt: str | AsyncIterable[dict[str, Any]],
+    prompt: str,
     options: AzureOpenAIOptions,
 ) -> AsyncIterator[Message]:
     """Query Azure OpenAI APIM with enterprise authentication.
@@ -19,8 +18,7 @@ async def azure_query(
     with OAuth2 client credentials flow for enterprise-level authentication.
 
     Args:
-        prompt: The prompt to send to Azure OpenAI. Can be a string for single queries
-                or an AsyncIterable[dict] for streaming mode.
+        prompt: The prompt string to send to Azure OpenAI.
         options: Azure OpenAI configuration with:
                  - tenant_id: Azure AD tenant ID
                  - client_id: Application (client) ID

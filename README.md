@@ -187,8 +187,9 @@ The SDK uses OAuth2 client credentials flow:
 ## Error Handling
 
 ```python
-from claude_agent_sdk import azure_query, AzureOpenAIOptions
-from claude_agent_sdk import CLIConnectionError
+import os
+
+from claude_agent_sdk import azure_query, AzureOpenAIOptions, CLIConnectionError
 import aiohttp
 
 async def query_with_error_handling():
@@ -338,7 +339,7 @@ MIT License - see LICENSE file for details.
 ## Support
 
 For issues and questions:
-- GitHub Issues: [Report issues here]
+- GitHub Issues: [https://github.com/ucalyptus/azure-oai-agent-sdk-python/issues](https://github.com/ucalyptus/azure-oai-agent-sdk-python/issues)
 - Documentation: [Azure OpenAI Documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
 - Azure Support: Contact Azure support for infrastructure issues
 

@@ -2,7 +2,7 @@
 
 import json
 import logging
-from collections.abc import AsyncIterable, AsyncIterator
+from collections.abc import AsyncIterator
 from typing import Any
 
 import aiohttp
@@ -20,17 +20,16 @@ class AzureHTTPTransport(Transport):
 
     def __init__(
         self,
-        prompt: str | AsyncIterable[dict[str, Any]],
+        prompt: str,
         options: AzureOpenAIOptions,
     ):
         """Initialize Azure HTTP transport.
 
         Args:
-            prompt: Initial prompt or stream of messages
+            prompt: Initial prompt string
             options: Azure OpenAI configuration options
         """
         self._prompt = prompt
-        self._is_streaming = not isinstance(prompt, str)
         self._options = options
         self._session: aiohttp.ClientSession | None = None
         self._ready = False
@@ -60,7 +59,7 @@ class AzureHTTPTransport(Transport):
             self._session = aiohttp.ClientSession()
 
             # Validate authentication by getting a token
-            await self._auth.get_access_token()
+            await self._auth.get_access_token(self._session)
 
             self._ready = True
             logger.info("Successfully connected to Azure OpenAI APIM")
@@ -103,7 +102,7 @@ class AzureHTTPTransport(Transport):
 
         try:
             # Get access token
-            access_token = await self._auth.get_access_token()
+            access_token = await self._auth.get_access_token(self._session)
 
             # Prepare headers
             headers = {
@@ -140,33 +139,42 @@ class AzureHTTPTransport(Transport):
                 response.raise_for_status()
 
                 # Process Server-Sent Events stream
-                async for line in response.content:
-                    line_str = line.decode("utf-8").strip()
+                # SSE format uses double newlines to separate events
+                buffer = ""
+                async for chunk_bytes in response.content.iter_any():
+                    buffer += chunk_bytes.decode("utf-8")
 
-                    if not line_str:
-                        continue
+                    # Process complete events (separated by double newlines)
+                    while "\n\n" in buffer:
+                        event, buffer = buffer.split("\n\n", 1)
+                        event = event.strip()
 
-                    # Skip SSE comment lines
-                    if line_str.startswith(":"):
-                        continue
-
-                    # Parse SSE data
-                    if line_str.startswith("data: "):
-                        data_str = line_str[6:]  # Remove "data: " prefix
-
-                        # Check for stream end
-                        if data_str == "[DONE]":
-                            break
-
-                        try:
-                            chunk = json.loads(data_str)
-                            # Convert Azure OpenAI format to SDK format
-                            message = self._convert_chunk_to_message(chunk)
-                            if message:
-                                yield message
-                        except json.JSONDecodeError as e:
-                            logger.warning(f"Failed to parse chunk: {e}")
+                        if not event:
                             continue
+
+                        # Skip SSE comment lines
+                        if event.startswith(":"):
+                            continue
+
+                        # Parse SSE data (can be multi-line within a single event)
+                        for line in event.splitlines():
+                            if line.startswith("data: "):
+                                data_str = line[6:]  # Remove "data: " prefix
+
+                                # Check for stream end
+                                if data_str == "[DONE]":
+                                    buffer = ""  # Clear buffer
+                                    break
+
+                                try:
+                                    chunk = json.loads(data_str)
+                                    # Convert Azure OpenAI format to SDK format
+                                    message = self._convert_chunk_to_message(chunk)
+                                    if message:
+                                        yield message
+                                except json.JSONDecodeError as e:
+                                    logger.warning(f"Failed to parse chunk: {e}")
+                                    continue
 
             # Yield final result message
             yield {
@@ -192,12 +200,7 @@ class AzureHTTPTransport(Transport):
         Returns:
             List of message dictionaries in Azure OpenAI format
         """
-        if isinstance(self._prompt, str):
-            return [{"role": "user", "content": self._prompt}]
-
-        # For streaming prompts, we'd need to accumulate them
-        # For now, convert simple string prompt
-        return [{"role": "user", "content": str(self._prompt)}]
+        return [{"role": "user", "content": self._prompt}]
 
     def _convert_chunk_to_message(self, chunk: dict[str, Any]) -> dict[str, Any] | None:
         """Convert Azure OpenAI stream chunk to SDK message format.
@@ -213,12 +216,12 @@ class AzureHTTPTransport(Transport):
             return None
 
         delta = choices[0].get("delta", {})
-        role = delta.get("role")
         content = delta.get("content")
         tool_calls = delta.get("tool_calls")
 
-        # Build message based on delta type
-        if role == "assistant" and (content or tool_calls):
+        # Return message if there's any content or tool calls
+        # Note: In streaming mode, role is only present in the first chunk
+        if content or tool_calls:
             message: dict[str, Any] = {
                 "type": "assistant",
                 "message": {
@@ -234,16 +237,32 @@ class AzureHTTPTransport(Transport):
             # Add tool calls
             if tool_calls:
                 for tool_call in tool_calls:
-                    if tool_call.get("function"):
-                        function = tool_call["function"]
-                        message["message"]["content"].append(
-                            {
-                                "type": "tool_use",
-                                "id": tool_call.get("id", ""),
-                                "name": function.get("name", ""),
-                                "input": json.loads(function.get("arguments", "{}")),
-                            }
+                    function = tool_call.get("function")
+                    if not function:
+                        logger.warning(
+                            "Tool call missing 'function' field: %r", tool_call
                         )
+                        continue
+
+                    # Handle partial function arguments in streaming
+                    arguments = function.get("arguments", "{}")
+                    try:
+                        parsed_args = json.loads(arguments) if arguments else {}
+                    except json.JSONDecodeError:
+                        # Arguments may be incomplete in streaming, skip for now
+                        logger.debug(
+                            "Skipping partial tool call arguments: %s", arguments
+                        )
+                        continue
+
+                    message["message"]["content"].append(
+                        {
+                            "type": "tool_use",
+                            "id": tool_call.get("id", ""),
+                            "name": function.get("name", ""),
+                            "input": parsed_args,
+                        }
+                    )
 
             return message
 

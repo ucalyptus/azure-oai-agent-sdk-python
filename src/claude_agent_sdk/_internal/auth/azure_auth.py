@@ -37,28 +37,36 @@ class AzureADAuth:
             f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
         )
 
-    async def get_access_token(self) -> str:
+    async def get_access_token(self, session: aiohttp.ClientSession) -> str:
         """Get a valid access token, refreshing if necessary.
+
+        Args:
+            session: aiohttp ClientSession to use for HTTP requests
 
         Returns:
             Valid access token string
 
         Raises:
             aiohttp.ClientError: If token acquisition fails
+            RuntimeError: If the access token cannot be acquired or response is invalid
         """
         # Check if we have a valid cached token (with 5 minute buffer)
         if self._token and time.time() < (self._token_expiry - 300):
             return self._token
 
         # Request new token
-        await self._refresh_token()
+        await self._refresh_token(session)
         if not self._token:
             raise RuntimeError("Failed to acquire access token")
 
         return self._token
 
-    async def _refresh_token(self) -> None:
-        """Refresh the access token using client credentials flow."""
+    async def _refresh_token(self, session: aiohttp.ClientSession) -> None:
+        """Refresh the access token using client credentials flow.
+
+        Args:
+            session: aiohttp ClientSession to use for HTTP requests
+        """
         data = {
             "grant_type": "client_credentials",
             "client_id": self.client_id,
@@ -66,21 +74,20 @@ class AzureADAuth:
             "scope": self.scope,
         }
 
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(self._token_url, data=data) as response:
-                    response.raise_for_status()
-                    token_data: dict[str, Any] = await response.json()
+        try:
+            async with session.post(self._token_url, data=data) as response:
+                response.raise_for_status()
+                token_data: dict[str, Any] = await response.json()
 
-                    self._token = token_data["access_token"]
-                    expires_in = int(token_data.get("expires_in", 3600))
-                    self._token_expiry = time.time() + expires_in
+                self._token = token_data["access_token"]
+                expires_in = int(token_data.get("expires_in", 3600))
+                self._token_expiry = time.time() + expires_in
 
-                    logger.info("Successfully acquired Azure AD access token")
+                logger.info("Successfully acquired Azure AD access token")
 
-            except aiohttp.ClientError as e:
-                logger.error(f"Failed to acquire Azure AD token: {e}")
-                raise
-            except KeyError as e:
-                logger.error(f"Invalid token response format: {e}")
-                raise RuntimeError(f"Invalid token response: {e}") from e
+        except aiohttp.ClientError as e:
+            logger.error(f"Failed to acquire Azure AD token: {e}")
+            raise
+        except KeyError as e:
+            logger.error(f"Invalid token response format: {e}")
+            raise RuntimeError(f"Invalid token response: {e}") from e

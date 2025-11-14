@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Azure OpenAI Team", email = "support@example.com"},
+    {name = "Azure OpenAI Team"},
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

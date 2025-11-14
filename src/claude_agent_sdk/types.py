@@ -571,11 +571,11 @@ class AzureOpenAIOptions:
     # Azure AD Authentication (OAuth2 Client Credentials)
     tenant_id: str  # Azure AD tenant ID
     client_id: str  # Application (client) ID
-    client_secret: str  # Client secret value
+    client_secret: str = field(repr=False)  # Client secret (hidden from repr)
 
     # Azure APIM Configuration
     endpoint: str  # APIM endpoint URL (e.g., https://your-apim.azure-api.net/openai)
-    apim_subscription_key: str  # APIM subscription key
+    apim_subscription_key: str = field(repr=False)  # APIM key (hidden from repr)
 
     # Azure OpenAI Model Configuration
     model: str = "gpt-4"  # Model deployment name
